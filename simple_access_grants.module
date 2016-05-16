@@ -1,0 +1,605 @@
+<?php
+/**
+ * @file
+ * This module allows administrators to make use of Backdrop's
+ * 'Access Grant' system for restricting access to nodes.
+ * The module sets up a single realm and then administers the
+ * appropriate settings within that realm to control the right
+ * to view, edit or delete nodes.
+ * Grants may be set for each user role and individual nodes
+ * or for all nodes of the same type.
+ * Also, profiles may be defined that are a set of roles and
+ * their grants for all nodes of the same type.
+ * If a node is not assigned a grant within this realm, it will
+ * remain viewable by all users unless other restrictions are
+ * in place.
+ *
+ * All settings are held in the config file
+ * simple_access_grants.settings.json
+ */
+
+
+/**
+ * Implements hook_menu().
+ */
+function simple_access_grants_menu()
+{
+  $items['admin/config/content/simple_access_grants/profiles'] = array(
+    'title' => 'Simple Access Grant Profiles',
+    'page callback' => 'backdrop_get_form',
+    'page arguments' => array('simple_access_grants_profile_list'),
+    'access callback' => 'user_access',
+    'access arguments' => array('administer simple access grants'),
+    'description' => 'Manage profiles for simple access grant realm',
+    'file' => 'simple_access_grants.admin.inc',
+  );
+  $items['admin/config/content/simple_access_grants/profiles/add'] = array(
+    'title' => 'Add profile',
+    'page callback' => 'backdrop_get_form',
+    'page arguments' => array('simple_access_grants_add_profile_form'),
+    'access callback' => 'user_access',
+    'access arguments' => array('administer simple access grants'),
+    'type' => MENU_LOCAL_ACTION,
+    'file' => 'simple_access_grants.admin.inc',
+  );
+  $items['admin/config/content/simple_access_grants/profiles/apply'] = array(
+    'title' => 'Apply profile',
+    'page callback' => 'backdrop_get_form',
+    'page arguments' => array('simple_access_grants_apply_profile_form'),
+    'access callback' => 'user_access',
+    'access arguments' => array('administer simple access grants'),
+    'type' => MENU_LOCAL_ACTION,
+    'file' => 'simple_access_grants.admin.inc',
+  );
+  $items['admin/config/content/simple_access_grants/profiles/%simple_access_grants_profile/edit'] = array(
+    'title' => 'Edit Profile',
+    'page callback' => 'backdrop_get_form',
+    'page arguments' => array('simple_access_grants_edit_profile_form', 5),
+    'access callback' => 'user_access',
+    'access arguments' => array('administer simple access grants'),
+    'type' => MENU_CALLBACK,
+    'file' => 'simple_access_grants.admin.inc',
+  );
+  $items['admin/config/content/simple_access_grants/profiles/%simple_access_grants_profile/delete'] = array(
+    'title' => 'Delete Profile',
+    'page callback' => 'backdrop_get_form',
+    'page arguments' => array('simple_access_grants_profile_delete_confirm', 5),
+    'access callback' => 'user_access',
+    'access arguments' => array('administer simple access grants'),
+    'type' => MENU_CALLBACK,
+    'file' => 'simple_access_grants.admin.inc',
+  );
+  return $items;
+}
+
+
+/**
+ * Implements hook_perm().
+ */
+function simple_access_grants_permission()
+{
+  return array(
+    'administer simple access grants grants' => array(
+      'title' => t('Administer Simple Access Grants'),
+      'description' => t('Allow access to administration pages for simple access grants.'),
+    ),
+    'assign access to nodes' => array(
+      'title' => t('Assign access to nodes'),
+      'description' => t('Allow assigning of grants to nodes.'),
+    ),
+    'assign profiles to nodes' => array(
+      'title' => t('Assign profiles to nodes'),
+      'description' => t('Allow assigning of access profiles to nodes.'),
+    ),
+  );
+}
+
+
+/**
+ * Implements hook_node_delete().
+ */
+/**
+ * If there are settings for this node in sag_nodes, delete them.
+ */
+function simple_access_grants_node_delete($node)
+{
+  config_set('simple_access_grants.settings', "sag_nodes.$node", "");
+}
+
+
+/**
+ * Implements hook_node_access_records().
+ * Used by Backdrop when saving a node and when rebuilding permissions
+ * Provides the 'locks' to prevent access to nodes
+ * Locks are applied for a realm
+ * They may be for individual nodes, or for a node type
+ * Or applied as a set called a profile
+ * This module's locks are all for profile 'simple_access_grants'
+ */
+function simple_access_grants_node_access_records($node)
+{
+  // the data structure of a lock is:
+  // nid - the node ID
+  // gid - the number of the role this belongs to
+  // realm - predefined as 'simple_access_grant'
+  // grant_view   - 0 or 1
+  // grant_update - 0 or 1
+  // grant_delete - 0 or 1
+
+  // it is possible to have more than one lock per node
+  // note that having a valid key to any lock will give access to the node.
+
+  // find node type and id
+  $nodetype = $node->type;
+  $nid = $node->nid;
+
+  // get grants from node record
+  $node_grants = config_get('simple_access_grants.settings', "sag_nodes.$nid");
+  // this gives role-grant settings - role is the name,
+	// grant is an array of the settings for view, update and delete
+
+  // get grants because of node type
+  $nodetypes = config_get('simple_access_grants.settings', "sag_nodetypes.$nodetype");
+	$nodetype_grants = $nodetypes['roles'];
+
+	// get linked profiles
+	$profiles = $nodetypes['profiles'];
+
+	// get grants granted by profiles for each role
+	$profile_grants = array();
+	foreach($profiles as $profile) {
+	  $profile_grants[$profile] = config_get('simple_access_grants.settings', "sag_profiles.$profile.roles");
+	}
+
+	//start merging
+	$grants = $node_grants;
+	foreach($nodetype_grants as $role => $gdata){
+	  $grants[$role]['view'] += $gdata['view'];
+		$grants[$role]['update'] += $gdata['update'];
+		$grants[$role]['delete'] += $gdata['delete'];
+	}
+
+	// add in any profile grants
+  foreach ($profile_grants as $profile => $pdata) {
+    foreach ($pdata as $role => $gdata) {
+      $grants[$role]['view'] += $gdata['view'];
+      $grants[$role]['update'] += $gdata['update'];
+      $grants[$role]['delete'] += $gdata['delete'];
+    }
+  }
+
+  // create grant for each role using role number as gid
+  // get role numbers from config sag_roles
+  $rolenumbers = config_get('simple_access_grants.settings', 'sag_roles');
+	$grantlocks = array();
+  foreach($grants as $role => $gdata){
+    $grantlocks[] = array(
+      'nid' => $nid,
+      'gid' => $rolenumbers[$role],
+      'realm' => 'simple_access_grant',
+      'grant_view' => $gdata['view'] > 0 ? 1 : 0,
+      'grant_update' => $gdata['update'] > 0 ? 1 : 0,
+      'grant_delete' => $gdata['delete'] > 0 ? 1 : 0,
+    );
+  }
+  return $grantlocks;
+}
+
+
+/**
+ * Implements hook_node_grants().
+ * This provides the keys used by Backdrop to open the 'locks' provided by
+ * hook_node_access_records and stored in database table node_access
+ *
+ * When a user tries to perform an operation on a node, Backdrop calls
+ * hook_node_grants() to determine grant ID and realm settings for the user.
+ * Backdrop looks up the permitted grant ID and realm combinations for the node,
+ * and compares them to the grant ID and realm keys provided here.
+ * If grant ID and realm match for both
+ * user and node, then the requested operation is allowed.
+ *
+ * $account: The user object whose grants are requested.
+ * $op: The node operation to be performed, either 'view', 'update', or 'delete'.
+ * Return value: An array whose keys are "realms" of grants, and whose values are
+ * arrays of the grant IDs within this realm that this user is being granted.
+ * Note that this module uses a single realm. Other realms may be in use
+ * by other modules.
+ */
+
+function simple_access_grants_node_grants($account, $op)
+{
+  // build the result in array 'grants'
+  $grants = array();
+
+  // anonymous users do not have grants
+  if ($account->uid) {
+    $user = $account->uid;
+
+    // given the user's account and the op, list the roles
+    // for which this user can use this op, for each type of node.
+    // The result will be an array of role numbers
+
+    // get users roles for site
+    $userroles = $account->roles;
+		// get role numbers from config
+    $currentroles = config_get('simple_access_grants.settings', 'sag_roles');
+
+    if (isset($userroles)) {
+      // for each user role and each node type
+      // find whether there is a grant for this value of $op
+      foreach ($userroles as $role => $rname) {
+        // get role number from config
+        $rnum = $currentroles[$rname];
+        // get nodetypes for this user and role
+        $rnodetypes = $rname['nodetypes'];
+        // find grants for each node type in this role
+        $grants = array();
+        // checking whether this op is permitted
+        foreach ($rnodetypes as $nodetype => $gdata) {
+          $isview = (($op == 'view') && isset ($gdata['view'])) ? 1 : 0;
+          $isupdate = (($op == 'update') && isset ($gdata['update'])) ? 1 : 0;
+          $isdelete = (($op == 'delete') && isset ($gdata['delete'])) ? 1 : 0;
+          $isany = $isview + $isupdate + $isdelete;
+          if ($isany > 0) {
+					  // found a grant for this role
+            $grants[] = $rnum;
+          }
+        }
+      }
+    }
+  }
+  return $grants;
+}
+
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ * Add current access settings to node_form.
+ * Merge settings from config sag_nodes (if any)
+ * with settings from sag_nodetypes for this type of node.
+ */
+function simple_access_grants_form_node_form_alter(&$form, &$form_state, $form_id)
+{
+  if ($simple_access_grants_form = simple_access_grants_form($form_state['node'])) {
+    $form = array_merge($form, $simple_access_grants_form);
+  }
+  $form['#submit'][] = 'simple_access_grants_node_submit';
+}
+
+
+/**
+ * Submit callback for the node alter form.
+ */
+function simple_access_grants_node_submit(&$form, &$form_state)
+{
+  $op = isset($form_state['values']['op']) ? $form_state['values']['op'] : '';
+  $nid = $form_state['values']['nid'];
+  if ($op == t('Save')) {
+    // save revised values in config sag_nodes
+    // but check that some value is set
+    $grants = $form_state['values']['access'];
+    $found = 0;
+    $grantvalue = array();
+    foreach ($grants as $role => $grant) {
+      if (($grant['view'] == 1) || ($grant['update'] == 1) || ($grant['delete'] == 1)) {
+        config_set('simple_access_grants.settings', "sag_nodes.$nid", $grants);
+        $found = 1;
+      }
+    }
+    // if no grant is set, clear record for this node
+    if ($found == 0) {
+      config_set('simple_access_grants.settings', "sag_nodes.$nid", "");
+    }
+  }
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ * Add access settings for this type of node to node_type_form.
+ */
+function simple_access_grants_form_node_type_form_alter(&$form, &$form_state, $form_id)
+{
+  if ($simple_access_grants_node_type_form = simple_access_grants_node_type_form($form['#node_type'])) {
+    $form = array_merge($form, $simple_access_grants_node_type_form);
+  }
+  $form['#submit'][] = 'simple_access_grants_node_type_submit';
+}
+
+
+/**
+ * Submit callback for the node type alter form.
+ */
+function simple_access_grants_node_type_submit(&$form, &$form_state)
+{
+  $type = $form_state['values']['type'];
+  // save revised values in config sag_nodetypes
+  // but check that some value is set
+  $grants = $form_state['values']['access'];
+  $found = 0;
+  $grantvalue = array();
+  foreach ($grants as $role => $grant) {
+    if (($grant['view'] == 1) || ($grant['update'] == 1) || ($grant['delete'] == 1)) {
+      config_set('simple_access_grants.settings', "sag_nodetypes.$type", $grants);
+      $found = 1;
+    }
+  }
+  // if no grant is set, clear record for this node type
+  if ($found == 0) {
+    config_set('simple_access_grants.settings', "sag_nodetypes.$type", "");
+  }
+  $tidyup = simple_access_grants_audit();
+}
+
+/**
+ * Implements hook_theme().
+ */
+function simple_access_grants_theme()
+{
+  return array(
+    'simple_access_grants_form' => array(
+      'render element' => 'form',
+      'file' => 'simple_access_grants.theme.inc',
+    ),
+    'simple_access_grants_page_overview_list' => array(
+      'render element' => 'form',
+      'file' => 'simple_access_grants.theme.inc',
+    ),
+    'simple_access_grants_profile_list' => array(
+      'render element' => 'form',
+      'file' => 'simple_access_grants.theme.inc',
+    ),
+    'simple_access_grants_edit_profile_form' => array(
+      'render element' => 'form',
+      'file' => 'simple_access_grants.theme.inc',
+    ),
+    'simple_access_grants_add_profile_form' => array(
+      'render element' => 'form',
+      'file' => 'simple_access_grants.theme.inc',
+    ),
+  );
+}
+
+
+/**
+ * Simple Access Grants form.
+ * Provide the 'Access' form for individual nodes
+ */
+
+function simple_access_grants_form($node, $admin = FALSE)
+{
+  // Get array of current roles excluding anonymous
+  $roles = user_roles($members_only = TRUE);
+
+  // Get current grant settings for this specific node (if any exist)
+  // and add in grant settings for this node type.
+  $nid = $node->nid;
+  $node_grants = config_get('simple_access_grants.settings', "sag_nodes.$nid");
+  $nodetype = $node->type;
+  $nodetype_grants = config_get('simple_access_grants.settings', "sag_nodetypes.$nodetype");
+  // for each role check whether both node and node_type settings apply
+  // and if so, merge the settings
+  foreach ($roles as $role) {
+    $role = strtolower($role);
+    if (isset($node_grants[$role]) && isset($nodetype_grants[$role])) {
+      $node_grants[$role] = simple_access_grants_merge($node_grants[$role], $nodetype_grants[$role]);
+    }
+  }
+  if (!isset($node_grants)) {
+    $node_grants = $nodetype_grants;
+  }
+  // Set up the outer fieldset.
+  $form['simple_access_grants'] = array(
+    '#title' => t('Access settings'),
+    '#type' => 'fieldset',
+    '#collapsible' => TRUE,
+    '#access' => user_access('assign access to nodes') || user_access('administer nodes'),
+    '#attributes' => array(
+      'class' => array('simple-access-grant-settings'),
+    ),
+    '#weight' => 5,
+    '#group' => 'additional_settings',
+    '#attached' => array(
+      'js' => array(backdrop_get_path('module', 'simple_access_grants') . '/simple_access_grants.js'),
+    ),
+  );
+
+  $form['simple_access_grants']['access'] = array(
+    '#tree' => TRUE,
+    '#weight' => 5,
+    '#access' => user_access('assign access to nodes') || user_access('administer nodes'),
+    '#theme' => 'simple_access_grants_form',
+    '#attached' => array(
+      'css' => array(backdrop_get_path('module', 'simple_access_grants') . '/simple_access_grants.css'),
+    ),
+  );
+
+  // create table of roles and grants (if permission is right or user is admin)
+  foreach ($roles as $role => $gid) {
+    // given the role, we need the grant for this node from $node_grants
+    $node_grant = $node_grants[$role];
+    $form['simple_access_grants']['access'][$role] = simple_access_grants_form_row($role, $node_grant);
+  }
+
+  return $form;
+}
+
+function simple_access_grants_node_type_form($nodetype)
+{
+  // Get array of current roles excluding anonymous
+  $roles = user_roles($members_only = TRUE);
+  $nodetype = $nodetype->type;
+
+  $nodetype_grants = config_get('simple_access_grants.settings', "sag_nodetypes.$nodetype");
+
+  // Set up the outer fieldset.
+  $form['simple_access_grants'] = array(
+    '#title' => t('Access settings'),
+    '#type' => 'fieldset',
+    '#collapsible' => TRUE,
+    '#access' => user_access('administer nodes'),
+    '#attributes' => array(
+      'class' => array('simple-access-grant-settings'),
+    ),
+    '#weight' => 5,
+    '#group' => 'additional_settings',
+    '#attached' => array(
+      'js' => array(backdrop_get_path('module', 'simple_access_grants') . '/simple_access_grants.js'),
+    ),
+  );
+
+  $form['simple_access_grants']['access'] = array(
+    '#tree' => TRUE,
+    '#weight' => 5,
+    '#access' => user_access('assign access to nodes') || user_access('administer nodes') || user_access('assign owner permissions'),
+    '#theme' => 'simple_access_grants_form',
+    '#attached' => array(
+      'css' => array(backdrop_get_path('module', 'simple_access_grants') . '/simple_access_grants.css'),
+    ),
+  );
+
+  // create table of roles and grants (if permission is right or user is admin)
+  foreach ($roles as $role => $gid) {
+    // given the role, we need the grant for this node from $node_grants
+    $node_grant = $nodetype_grants[$role];
+    $form['simple_access_grants']['access'][$role] = simple_access_grants_form_row($role, $node_grant);
+  }
+  return $form;
+}
+
+
+/**
+ * Submit callback for the node type alter form.
+ */
+function simple_access_grants_node_type_form_submit(&$form, &$form_state)
+{
+  $op = isset($form_state['values']['op']) ? $form_state['values']['op'] : '';
+  $type = $form_state['values']['type'];
+  if ($op == t('Save content type')) {
+    $grants = $form_state['values']['access'];
+    config_set('simple_access_grants.settings', "sag_nodetypes.$type", $grants);
+  }
+}
+
+
+/**
+ * Create a single row in the form.
+ * The row has the name of the role followed by checkboxes
+ * for each view, update and delete of the grant in this realm.
+ * Use grant number to set checkbox defaults.
+ */
+function simple_access_grants_form_row($role, $grant)
+{
+  $form['name'] = array(
+    '#markup' => $role,
+  );
+
+  $form['view'] = array(
+    '#type' => 'checkbox',
+    '#default_value' => $grant['view'],
+  );
+  $form['update'] = array(
+    '#type' => 'checkbox',
+    '#default_value' => $grant['update'],
+  );
+  $form['delete'] = array(
+    '#type' => 'checkbox',
+    '#default_value' => $grant['delete'],
+  );
+  return $form;
+}
+
+
+/**
+ * Merge two grant arrays
+ */
+function simple_access_grants_merge($GrantA, $GrantB)
+{
+  // $GrantA and $GrantB are grant values
+  // e.g. $grant['view'] is equal to 0 or 1
+  // to be merged as one grant value
+  // if either GrantA or GrantB gives a value of 1
+  // then merge value is 1
+  $grant['view'] = ($GrantA['view'] == 0) && ($GrantB['view'] == 0) ? 0 : 1 ;
+  $grant['update'] = ($GrantA['update'] == 0) && ($GrantB['update'] == 0) ? 0 : 1 ;
+  $grant['delete'] = ($GrantA['delete'] == 0) && ($GrantB['delete'] == 0) ? 0 : 1 ;
+  return $grant;
+}
+
+/**
+ * Load a profile.
+ */
+function simple_access_grants_profile_load($pname)
+{
+  return $pname;
+}
+
+/**
+ * Remove null records
+ */
+function simple_access_grants_audit()
+{
+  // check individual node settings
+  $nodes = config_get('simple_access_grants.settings', 'sag_nodes');
+  foreach($nodes as $node => $ndata) {
+    // rebuild config data, omitting any null grants
+    $nodegrants = array();
+    $found = 0;
+    foreach ($ndata as $role => $grant) {
+      if (($grant['view'] == 1) || ($grant['update'] == 1) || ($grant['delete'] == 1)) {
+        $nodegrants[$role] = $grant;
+        $found = 1;
+      }
+    }
+    if ($found > 0) {
+      config_set('simple_access_grants.settings', "sag_nodes.$node", $nodegrants);
+    }
+  }
+
+  // check node type settings
+  $nodetypes = config_get('simple_access_grants.settings', 'sag_nodetypes');
+  foreach ($nodetypes as $nodetype => $ndata) {
+    // rebuild config data, omitting any null grants
+    // check that nodetype still exists
+    // use backdrop function to get node type names
+    $nodetypelist = node_type_get_names();
+    if (isset($nodetypelist[$nodetype])) {
+      $nodegrants = array();
+      $found = 0;
+      foreach ($ndata as $role => $grant) {
+        if (($grant['view'] == 1) || ($grant['update'] == 1) || ($grant['delete'] == 1)) {
+          $nodegrants[$role] = $grant;
+          $found = 1;
+        }
+      }
+	    if($found > 0)
+	    {
+	      config_set('simple_access_grants.settings', "sag_nodetypes.$nodetype", $nodegrants);
+	    }
+		}
+	}
+
+	// check role settings
+	$roles = config_get('simple_access_grants.settings', 'sag_roles');
+	$currentroles = user_roles($members_only = TRUE);
+	$checkedroles = array();
+  foreach($roles as $role => $rnum) {
+		if(isset($currentroles[$role]))
+		{
+		  $checkedroles[$role] = $rnum;
+		}
+	}
+  config_set('simple_access_grants.settings', 'sag_roles', $checkedroles);
+}
+
+/**
+ * Implements hook_config_info().
+ */
+function simple_access_grants_config_info()
+{
+  $prefixes['simple_access_grants.settings'] = array(
+    'label' => t('Simple Access Grants'),
+    'group' => t('Configuration'),
+  );
+  return $prefixes;
+}
+
