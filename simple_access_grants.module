@@ -140,31 +140,38 @@ function simple_access_grants_node_access_records($node)
 
   // get grants because of node type
   $nodetypes = config_get('simple_access_grants.settings', "sag_nodetypes.$nodetype");
-	$nodetype_grants = $nodetypes['roles'];
-
-	// get linked profiles
-	$profiles = $nodetypes['profiles'];
+  if (isset($nodetypes)) {
+    $nodetype_grants = $nodetypes['roles'];
+    // get linked profiles
+    $profiles = $nodetypes['profiles'];
+  }
 
 	// get grants granted by profiles for each role
-	$profile_grants = array();
-	foreach($profiles as $profile) {
-	  $profile_grants[$profile] = config_get('simple_access_grants.settings', "sag_profiles.$profile.roles");
+  if (isset($profiles)) {
+    $profile_grants = array();
+    foreach ($profiles as $profile) {
+      $profile_grants[$profile] = config_get('simple_access_grants.settings', "sag_profiles.$profile.roles");
+    }
 	}
 
 	//start merging
-	$grants = $node_grants;
-	foreach($nodetype_grants as $role => $gdata){
-	  $grants[$role]['view'] += $gdata['view'];
-		$grants[$role]['update'] += $gdata['update'];
-		$grants[$role]['delete'] += $gdata['delete'];
+  if (isset($nodetype_grants)) {
+    $grants = $node_grants;
+    foreach ($nodetype_grants as $role => $gdata) {
+      $grants[$role]['view'] = isset($grants[$role]['view']) ? $grants[$role]['view'] + $gdata['view'] : $gdata['view'];
+      $grants[$role]['update'] = isset($grants[$role]['update']) ? $grants[$role]['update'] + $gdata['update'] : $gdata['update'];
+      $grants[$role]['delete'] = isset($grants[$role]['delete']) ? $grants[$role]['delete'] + $gdata['delete'] : $gdata['delete'];
+    }
 	}
 
 	// add in any profile grants
-  foreach ($profile_grants as $profile => $pdata) {
-    foreach ($pdata as $role => $gdata) {
-      $grants[$role]['view'] += $gdata['view'];
-      $grants[$role]['update'] += $gdata['update'];
-      $grants[$role]['delete'] += $gdata['delete'];
+  if (isset($profile_grants)) {
+    foreach ($profile_grants as $profile => $pdata) {
+      foreach ($pdata as $role => $gdata) {
+        $grants[$role]['view'] = isset($grants[$role]['view']) ? $grants[$role]['view'] + $gdata['view'] : $gdata['view'];
+        $grants[$role]['update'] = isset($grants[$role]['update']) ? $grants[$role]['update'] + $gdata['update'] : $gdata['update'];
+        $grants[$role]['delete'] = isset($grants[$role]['delete']) ? $grants[$role]['delete'] + $gdata['delete'] : $gdata['delete'];
+      }
     }
   }
 
@@ -172,15 +179,17 @@ function simple_access_grants_node_access_records($node)
   // get role numbers from config sag_roles
   $rolenumbers = config_get('simple_access_grants.settings', 'sag_roles');
 	$grantlocks = array();
-  foreach($grants as $role => $gdata){
-    $grantlocks[] = array(
-      'nid' => $nid,
-      'gid' => $rolenumbers[$role],
-      'realm' => 'simple_access_grant',
-      'grant_view' => $gdata['view'] > 0 ? 1 : 0,
-      'grant_update' => $gdata['update'] > 0 ? 1 : 0,
-      'grant_delete' => $gdata['delete'] > 0 ? 1 : 0,
-    );
+  if (isset($grants)) {
+    foreach ($grants as $role => $gdata) {
+      $grantlocks[] = array(
+        'nid' => $nid,
+        'gid' => $rolenumbers[$role],
+        'realm' => 'simple_access_grant',
+        'grant_view' => $gdata['view'] > 0 ? 1 : 0,
+        'grant_update' => $gdata['update'] > 0 ? 1 : 0,
+        'grant_delete' => $gdata['delete'] > 0 ? 1 : 0,
+      );
+    }
   }
   return $grantlocks;
 }
@@ -219,32 +228,19 @@ function simple_access_grants_node_grants($account, $op)
     // for which this user can use this op, for each type of node.
     // The result will be an array of role numbers
 
-    // get users roles for site
+    // get this user's roles for the site
     $userroles = $account->roles;
-		// get role numbers from config
+    // get the role numbers registered for this module in config
     $currentroles = config_get('simple_access_grants.settings', 'sag_roles');
 
     if (isset($userroles)) {
-      // for each user role and each node type
+      // for each of this user's roles and each node type
       // find whether there is a grant for this value of $op
       foreach ($userroles as $role => $rname) {
         // get role number from config
         $rnum = $currentroles[$rname];
-        // get nodetypes for this user and role
-        $rnodetypes = $rname['nodetypes'];
-        // find grants for each node type in this role
-        $grants = array();
-        // checking whether this op is permitted
-        foreach ($rnodetypes as $nodetype => $gdata) {
-          $isview = (($op == 'view') && isset ($gdata['view'])) ? 1 : 0;
-          $isupdate = (($op == 'update') && isset ($gdata['update'])) ? 1 : 0;
-          $isdelete = (($op == 'delete') && isset ($gdata['delete'])) ? 1 : 0;
-          $isany = $isview + $isupdate + $isdelete;
-          if ($isany > 0) {
-					  // found a grant for this role
-            $grants[] = $rnum;
-          }
-        }
+        // add this role number to grants for this realm
+        $grants['simple_access_grant'][] = $rnum;
       }
     }
   }
@@ -314,12 +310,13 @@ function simple_access_grants_node_type_submit(&$form, &$form_state)
   $type = $form_state['values']['type'];
   // save revised values in config sag_nodetypes
   // but check that some value is set
+  // need to preserve 'profiles' settings
   $grants = $form_state['values']['access'];
   $found = 0;
   $grantvalue = array();
   foreach ($grants as $role => $grant) {
     if (($grant['view'] == 1) || ($grant['update'] == 1) || ($grant['delete'] == 1)) {
-      config_set('simple_access_grants.settings', "sag_nodetypes.$type", $grants);
+      config_set('simple_access_grants.settings', "sag_nodetypes.$type.roles", $grants);
       $found = 1;
     }
   }
@@ -327,6 +324,7 @@ function simple_access_grants_node_type_submit(&$form, &$form_state)
   if ($found == 0) {
     config_set('simple_access_grants.settings', "sag_nodetypes.$type", "");
   }
+  // get rid of null entries
   $tidyup = simple_access_grants_audit();
 }
 
@@ -429,7 +427,7 @@ function simple_access_grants_node_type_form($nodetype)
   $roles = user_roles($members_only = TRUE);
   $nodetype = $nodetype->type;
 
-  $nodetype_grants = config_get('simple_access_grants.settings', "sag_nodetypes.$nodetype");
+  $nodetype_grants = config_get('simple_access_grants.settings', "sag_nodetypes.$nodetype.roles");
 
   // Set up the outer fieldset.
   $form['simple_access_grants'] = array(
@@ -476,7 +474,7 @@ function simple_access_grants_node_type_form_submit(&$form, &$form_state)
   $type = $form_state['values']['type'];
   if ($op == t('Save content type')) {
     $grants = $form_state['values']['access'];
-    config_set('simple_access_grants.settings', "sag_nodetypes.$type", $grants);
+    config_set('simple_access_grants.settings', "sag_nodetypes.$type.roles", $grants);
   }
 }
 
