@@ -143,7 +143,7 @@ function simple_access_grants_node_access_records($node)
   if (isset($nodetypes)) {
     $nodetype_grants = $nodetypes['roles'];
     // get linked profiles
-    $profiles = $nodetypes['profiles'];
+    $profiles = isset($nodetypes['profiles']) ? $nodetypes['profiles'] : NULL;
   }
 
   // get grants granted by profiles for each role
@@ -224,9 +224,9 @@ function simple_access_grants_node_grants($account, $op)
   if ($account->uid) {
     $user = $account->uid;
 
-    // given the user's account and the op, list the roles
-    // for which this user can use this op, for each type of node.
-    // The result will be an array of role numbers
+    // given the user's account, list the roles
+    // for which this user has access grants, for each type of node.
+    // The result will be an array of role numbers for this realm.
 
     // get this user's roles for the site
     $userroles = $account->roles;
