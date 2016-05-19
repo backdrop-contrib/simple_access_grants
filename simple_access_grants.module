@@ -542,27 +542,7 @@ function simple_access_grants_audit()
     // rebuild config data, omitting any null grants
     $nodegrants = array();
     $found = 0;
-    foreach ($ndata as $role => $grant) {
-      if (($grant['view'] == 1) || ($grant['update'] == 1) || ($grant['delete'] == 1)) {
-        $nodegrants[$role] = $grant;
-        $found = 1;
-      }
-    }
-    if ($found > 0) {
-      config_set('simple_access_grants.settings', "sag_nodes.$node", $nodegrants);
-    }
-  }
-
-  // check node type settings
-  $nodetypes = config_get('simple_access_grants.settings', 'sag_nodetypes');
-  foreach ($nodetypes as $nodetype => $ndata) {
-    // rebuild config data, omitting any null grants
-    // check that nodetype still exists
-    // use backdrop function to get node type names
-    $nodetypelist = node_type_get_names();
-    if (isset($nodetypelist[$nodetype])) {
-      $nodegrants = array();
-      $found = 0;
+    if (isset($ndata)) {
       foreach ($ndata as $role => $grant) {
         if (($grant['view'] == 1) || ($grant['update'] == 1) || ($grant['delete'] == 1)) {
           $nodegrants[$role] = $grant;
@@ -570,7 +550,31 @@ function simple_access_grants_audit()
         }
       }
       if ($found > 0) {
-        config_set('simple_access_grants.settings', "sag_nodetypes.$nodetype", $nodegrants);
+        config_set('simple_access_grants.settings', "sag_nodes.$node", $nodegrants);
+      }
+    }
+  }
+
+  // check node type settings
+  $nodetypes = config_get('simple_access_grants.settings', 'sag_nodetypes');
+  if (isset($nodetypes)) {
+    foreach ($nodetypes as $nodetype => $ndata) {
+      // rebuild config data, omitting any null grants
+      // check that nodetype still exists
+      // use backdrop function to get node type names
+      $nodetypelist = node_type_get_names();
+      if (isset($nodetypelist[$nodetype])) {
+        $nodegrants = array();
+        $found = 0;
+        foreach ($ndata as $role => $grant) {
+          if (($grant['view'] == 1) || ($grant['update'] == 1) || ($grant['delete'] == 1)) {
+            $nodegrants[$role] = $grant;
+            $found = 1;
+          }
+        }
+        if ($found > 0) {
+          config_set('simple_access_grants.settings', "sag_nodetypes.$nodetype", $nodegrants);
+        }
       }
     }
   }
@@ -579,12 +583,14 @@ function simple_access_grants_audit()
   $roles = config_get('simple_access_grants.settings', 'sag_roles');
   $currentroles = user_roles($members_only = TRUE);
   $checkedroles = array();
-  foreach ($roles as $role => $rnum) {
-    if (isset($currentroles[$role])) {
-      $checkedroles[$role] = $rnum;
+  if (isset($roles)) {
+    foreach ($roles as $role => $rnum) {
+      if (isset($currentroles[$role])) {
+        $checkedroles[$role] = $rnum;
+      }
     }
+    config_set('simple_access_grants.settings', 'sag_roles', $checkedroles);
   }
-  config_set('simple_access_grants.settings', 'sag_roles', $checkedroles);
 }
 
 /**
