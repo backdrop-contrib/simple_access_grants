@@ -10,13 +10,13 @@
     }
   },
   "sag_roles": {
-    "authenticated": 1
+    "guest": 1
   },
   "sag_profiles": {
     "Profile 1": {
       "number": 1,
       "roles": {
-        "authenticated": {
+        "guest": {
           "view": 1,
           "update": 0,
           "delete": 0
@@ -24,17 +24,17 @@
       }
     }
   },
-  "sag_nodetype": {
-    "article": {
-      "guest": {
-        "view": 1,
-        "update": 0,
-        "delete": 0
-      },
-      "authenticated": {
-        "view": 1,
-        "update": 0,
-        "delete": 0
+  "sag_nodetypes": {
+    "restricted": {
+      "profiles": [
+        "Profile 1"
+      ],
+      "roles": {
+        "guest": {
+          "view": 1,
+          "update": 0,
+          "delete": 0
+        }
       }
     }
   }
