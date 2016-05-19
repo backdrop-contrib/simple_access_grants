@@ -136,7 +136,7 @@ function simple_access_grants_node_access_records($node)
   // get grants from node record
   $node_grants = config_get('simple_access_grants.settings', "sag_nodes.$nid");
   // this gives role-grant settings - role is the name,
-	// grant is an array of the settings for view, update and delete
+  // grant is an array of the settings for view, update and delete
 
   // get grants because of node type
   $nodetypes = config_get('simple_access_grants.settings', "sag_nodetypes.$nodetype");
@@ -146,25 +146,25 @@ function simple_access_grants_node_access_records($node)
     $profiles = $nodetypes['profiles'];
   }
 
-	// get grants granted by profiles for each role
+  // get grants granted by profiles for each role
   if (isset($profiles)) {
     $profile_grants = array();
     foreach ($profiles as $profile) {
       $profile_grants[$profile] = config_get('simple_access_grants.settings', "sag_profiles.$profile.roles");
     }
-	}
+  }
 
-	//start merging
+  //start merging
+  $grants = isset($node_grants) ? $node_grants : array();
   if (isset($nodetype_grants)) {
-    $grants = $node_grants;
     foreach ($nodetype_grants as $role => $gdata) {
       $grants[$role]['view'] = isset($grants[$role]['view']) ? $grants[$role]['view'] + $gdata['view'] : $gdata['view'];
       $grants[$role]['update'] = isset($grants[$role]['update']) ? $grants[$role]['update'] + $gdata['update'] : $gdata['update'];
       $grants[$role]['delete'] = isset($grants[$role]['delete']) ? $grants[$role]['delete'] + $gdata['delete'] : $gdata['delete'];
     }
-	}
+  }
 
-	// add in any profile grants
+  // add in any profile grants
   if (isset($profile_grants)) {
     foreach ($profile_grants as $profile => $pdata) {
       foreach ($pdata as $role => $gdata) {
@@ -178,7 +178,7 @@ function simple_access_grants_node_access_records($node)
   // create grant for each role using role number as gid
   // get role numbers from config sag_roles
   $rolenumbers = config_get('simple_access_grants.settings', 'sag_roles');
-	$grantlocks = array();
+  $grantlocks = array();
   if (isset($grants)) {
     foreach ($grants as $role => $gdata) {
       $grantlocks[] = array(
@@ -517,9 +517,9 @@ function simple_access_grants_merge($GrantA, $GrantB)
   // to be merged as one grant value
   // if either GrantA or GrantB gives a value of 1
   // then merge value is 1
-  $grant['view'] = ($GrantA['view'] == 0) && ($GrantB['view'] == 0) ? 0 : 1 ;
-  $grant['update'] = ($GrantA['update'] == 0) && ($GrantB['update'] == 0) ? 0 : 1 ;
-  $grant['delete'] = ($GrantA['delete'] == 0) && ($GrantB['delete'] == 0) ? 0 : 1 ;
+  $grant['view'] = ($GrantA['view'] == 0) && ($GrantB['view'] == 0) ? 0 : 1;
+  $grant['update'] = ($GrantA['update'] == 0) && ($GrantB['update'] == 0) ? 0 : 1;
+  $grant['delete'] = ($GrantA['delete'] == 0) && ($GrantB['delete'] == 0) ? 0 : 1;
   return $grant;
 }
 
@@ -538,7 +538,7 @@ function simple_access_grants_audit()
 {
   // check individual node settings
   $nodes = config_get('simple_access_grants.settings', 'sag_nodes');
-  foreach($nodes as $node => $ndata) {
+  foreach ($nodes as $node => $ndata) {
     // rebuild config data, omitting any null grants
     $nodegrants = array();
     $found = 0;
@@ -569,23 +569,21 @@ function simple_access_grants_audit()
           $found = 1;
         }
       }
-	    if($found > 0)
-	    {
-	      config_set('simple_access_grants.settings', "sag_nodetypes.$nodetype", $nodegrants);
-	    }
-		}
-	}
+      if ($found > 0) {
+        config_set('simple_access_grants.settings', "sag_nodetypes.$nodetype", $nodegrants);
+      }
+    }
+  }
 
-	// check role settings
-	$roles = config_get('simple_access_grants.settings', 'sag_roles');
-	$currentroles = user_roles($members_only = TRUE);
-	$checkedroles = array();
-  foreach($roles as $role => $rnum) {
-		if(isset($currentroles[$role]))
-		{
-		  $checkedroles[$role] = $rnum;
-		}
-	}
+  // check role settings
+  $roles = config_get('simple_access_grants.settings', 'sag_roles');
+  $currentroles = user_roles($members_only = TRUE);
+  $checkedroles = array();
+  foreach ($roles as $role => $rnum) {
+    if (isset($currentroles[$role])) {
+      $checkedroles[$role] = $rnum;
+    }
+  }
   config_set('simple_access_grants.settings', 'sag_roles', $checkedroles);
 }
 
