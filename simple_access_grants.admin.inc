@@ -27,7 +27,6 @@ function simple_access_grants_profile_list()
     '#description' => t('Here is a list of the current profiles.<br>Each profile is a set of role-grant arrays specifying the grants to apply to a role.<br>You may add additional profiles or edit the ones listed here.<br> Note that a profile is intended to be applied to the nodes of one particular type, selected when applying the profile.'),
     '#collapsible' => FALSE,
     '#tree' => TRUE,
-    '#theme' => 'simple_access_grants_profile_list',
     '#access' => t('assign profiles to nodes'),
   );
 
