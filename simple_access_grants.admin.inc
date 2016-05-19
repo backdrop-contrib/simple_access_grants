@@ -98,12 +98,14 @@ function simple_access_grants_add_profile_form_submit($form, &$form_state)
 
   // We also need to give a number to this profile
   $profiles = config_get('simple_access_grants.settings', 'sag_profiles');
-  // build array of existing profile numbers
+  // if non-zero build array of existing profile numbers
   $pnmax = 0;
-  foreach ($profiles as $profile => $pdata) {
-    $pnum = $pdata['number'];
-    if ($pnum > $pnmax) {
-      $pnmax = $pnum;
+  if (isset($profiles)) {
+    foreach ($profiles as $profile => $pdata) {
+      $pnum = $pdata['number'];
+      if ($pnum > $pnmax) {
+        $pnmax = $pnum;
+      }
     }
   }
   config_set('simple_access_grants.settings', "sag_profiles.$profile.number", $pnmax + 1);
