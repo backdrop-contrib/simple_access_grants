@@ -101,7 +101,7 @@ function simple_access_grants_add_profile_form_submit($form, &$form_state)
   $pnmax = 0;
   if (isset($profiles)) {
     foreach ($profiles as $profile => $pdata) {
-      $pnum = $pdata['number'];
+      $pnum = isset($pdata['number']) ? $pdata['number'] : 0;
       if ($pnum > $pnmax) {
         $pnmax = $pnum;
       }
@@ -118,7 +118,7 @@ function simple_access_grants_add_profile_form_submit($form, &$form_state)
  * Simple Access Grants edit profile form.
  * Used for editing a profile
  */
-function simple_access_grants_edit_profile_form($form, $form_state, $profile = array(), $op)
+function simple_access_grants_edit_profile_form($form, $form_state, $profile)
 {
   // Get array of current roles excluding anonymous
   $roles = user_roles($members_only = TRUE);
@@ -232,7 +232,7 @@ function simple_access_grants_apply_profile_form_submit($form, &$form_state)
   // add profile name to profiles in nodetype
   $nodetypeprofiles = config_get('simple_access_grants.settings', "sag_nodetypes.$selectednodetype.profiles");
   // add profile only if not already included
-  if (!in_array($profilename, $nodetypeprofiles)) {
+  if (isset($nodetypeprofiles) && !in_array($profilename, $nodetypeprofiles)) {
     $nodetypeprofiles[] = $profilename;
   }
   config_set('simple_access_grants.settings', "sag_nodetypes.$selectednodetype.profiles", $nodetypeprofiles);
