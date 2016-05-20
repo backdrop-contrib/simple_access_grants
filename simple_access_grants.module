@@ -24,12 +24,36 @@
  */
 function simple_access_grants_menu()
 {
+  $items['admin/config/content/simple_access_grants'] = array(
+    'title' => 'Simple Access Grants',
+    'description' => 'Configure permissions and profiles if access settings are used.',
+    'page callback' => 'backdrop_get_form',
+    'page arguments' => array('simple_access_grants_settings_page'),
+    'access callback' => 'user_access',
+    'access arguments' => array('manage simple access grants'),
+    'file' => 'simple_access_grants.admin.inc',
+    'type' => MENU_NORMAL_ITEM,
+  );
+
+  $items['admin/config/content/simple_access_grants/rebuild'] = array(
+    'title' => 'Rebuild',
+    'page callback' => 'backdrop_get_form',
+    'page arguments' => array('simple_access_grants_settings_page'),
+    'access callback' => 'user_access',
+    'access arguments' => array('manage simple access grants'),
+    'type' => MENU_DEFAULT_LOCAL_TASK,
+    'description' => 'You will need to rebuild the Node Access permissions data table whenever you add or update access settings for a node type or a profile for this module.',
+    'file' => 'simple_access_grants.admin.inc',
+    'weight' => -1,
+  );
+
   $items['admin/config/content/simple_access_grants/profiles'] = array(
-    'title' => 'Simple Access Grant Profiles',
+    'title' => 'Profiles',
     'page callback' => 'backdrop_get_form',
     'page arguments' => array('simple_access_grants_profile_list'),
     'access callback' => 'user_access',
     'access arguments' => array('administer simple access grants'),
+    'type' => MENU_LOCAL_TASK,
     'description' => 'Manage profiles for simple access grant realm',
     'file' => 'simple_access_grants.admin.inc',
   );
@@ -300,6 +324,9 @@ function simple_access_grants_form_node_type_form_alter(&$form, &$form_state, $f
   if ($simple_access_grants_node_type_form = simple_access_grants_node_type_form($form['#node_type'])) {
     $form = array_merge($form, $simple_access_grants_node_type_form);
   }
+  $form[] = array(
+    '#description' => t('Remember to rebuild permissions after changing Access Settings.')
+  );
   $form['#submit'][] = 'simple_access_grants_node_type_submit';
 }
 

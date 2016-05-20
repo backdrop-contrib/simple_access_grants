@@ -292,3 +292,41 @@ function simple_access_grants_profile_delete_confirm_submit($form, &$form_state)
   }
   $form_state['redirect'] = 'admin/config/content/simple_access_grants/profiles';
 }
+
+
+/**
+ * Simple Access Grants settings form.
+ */
+function simple_access_grants_settings_page() {
+  backdrop_set_title(t('Simple Access Grants Settings'));
+  $options = array(
+    'rebuild' => t('<strong>Rebuild</strong>: Rebuild the Node Access permissions data table for the realm Simple Access Grant using the settings provided by this module.'),
+
+  );
+
+  $form['simple_access_showgroups'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Rebuild permissions'),
+    '#description' => 'After adding or changing the access settings for a node type it is essential to rebuild the Node Access permissions data table for the realm Simple Access Grant',
+  );
+
+  // Add a submit button
+  $form['actions']['#type'] = 'actions';
+  $form['actions']['submit'] = array(
+    '#type' => 'submit',
+    '#value' => t('Next step'),
+  );
+
+  return $form;
+}
+
+/**
+ * Submit handler for module_settings_form().
+ */
+function simple_access_grants_settings_page_submit($form, &$form_state) {
+
+  $form['actions']['submit'] = NULL;
+
+  backdrop_set_message(t('You now need to !rebuild_permissions.', array('!rebuild_permissions' => l(t('rebuild permissions'), 'admin/reports/status/rebuild'))));
+}
+
