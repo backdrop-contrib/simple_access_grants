@@ -165,7 +165,8 @@ function simple_access_grants_node_access_records($node)
   // get grants because of node type
   $nodetypes = config_get('simple_access_grants.settings', "sag_nodetypes.$nodetype");
   if (isset($nodetypes)) {
-    $nodetype_grants = $nodetypes['roles'];
+    // there may be node types that only have grants because of profiles
+    $nodetype_grants = isset($nodetypes['roles']) ? $nodetypes['roles'] : NULL;
     // get linked profiles
     $profiles = isset($nodetypes['profiles']) ? $nodetypes['profiles'] : NULL;
   }
@@ -205,14 +206,16 @@ function simple_access_grants_node_access_records($node)
   $grantlocks = array();
   if (isset($grants)) {
     foreach ($grants as $role => $gdata) {
-      $grantlocks[] = array(
-        'nid' => $nid,
-        'gid' => $rolenumbers[$role],
-        'realm' => 'simple_access_grant',
-        'grant_view' => $gdata['view'] > 0 ? 1 : 0,
-        'grant_update' => $gdata['update'] > 0 ? 1 : 0,
-        'grant_delete' => $gdata['delete'] > 0 ? 1 : 0,
-      );
+      if (isset($gdata['view'])) {
+        $grantlocks[] = array(
+          'nid' => $nid,
+          'gid' => $rolenumbers[$role],
+          'realm' => 'simple_access_grant',
+          'grant_view' => $gdata['view'] > 0 ? 1 : 0,
+          'grant_update' => $gdata['update'] > 0 ? 1 : 0,
+          'grant_delete' => $gdata['delete'] > 0 ? 1 : 0,
+        );
+      }
     }
   }
   return $grantlocks;

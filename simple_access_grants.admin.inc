@@ -110,7 +110,7 @@ function simple_access_grants_add_profile_form_submit($form, &$form_state)
   config_set('simple_access_grants.settings', "sag_profiles.$profile.number", $pnmax + 1);
 
 
-  $form_state['redirect'] = 'admin/config/content/simple_access_grants/profiles';
+  $form_state['redirect'] = 'admin/config/content/simple_access_grants/rebuild';
 }
 
 
@@ -175,7 +175,7 @@ function simple_access_grants_edit_profile_form_submit($form, &$form_state)
     config_set('simple_access_grants.settings', "sag_profiles.$profile.roles.$grant", $grantdata);
   }
 
-  $form_state['redirect'] = 'admin/config/content/simple_access_grants/profiles';
+  $form_state['redirect'] = 'admin/config/content/simple_access_grants/rebuild';
 }
 
 /**
@@ -227,19 +227,19 @@ function simple_access_grants_apply_profile_form_submit($form, &$form_state)
 {
   $selectednodetype = $form['nodetype']['#value'];
   $profilename = $form['profilename']['#value'];
-  $nodetype_grants = "";
   // now update config settings
   // add profile name to profiles in nodetype
+  $nodetypeprofiles = array();
   $nodetypeprofiles = config_get('simple_access_grants.settings', "sag_nodetypes.$selectednodetype.profiles");
-  // add profile only if not already included
-  if (isset($nodetypeprofiles) && !in_array($profilename, $nodetypeprofiles)) {
+  // only add profile if not already included
+  if (!in_array($profilename, $nodetypeprofiles)) {
     $nodetypeprofiles[] = $profilename;
+    config_set('simple_access_grants.settings', "sag_nodetypes.$selectednodetype.profiles", $nodetypeprofiles);
   }
-  config_set('simple_access_grants.settings', "sag_nodetypes.$selectednodetype.profiles", $nodetypeprofiles);
 
   backdrop_set_message(t('You now need to !rebuild_permissions.', array('!rebuild_permissions' => l(t('rebuild permissions'), 'admin/reports/status/rebuild'))));
 
-  $form_state['redirect'] = 'admin/config/content/simple_access_grants/profiles';
+  $form_state['redirect'] = 'admin/config/content/simple_access_grants/rebuild';
 }
 
 /**
@@ -290,14 +290,15 @@ function simple_access_grants_profile_delete_confirm_submit($form, &$form_state)
     }
     config_set('simple_access_grants.settings', "sag_nodetypes.$ntype.profiles", $newprofiles);
   }
-  $form_state['redirect'] = 'admin/config/content/simple_access_grants/profiles';
+  $form_state['redirect'] = 'admin/config/content/simple_access_grants/rebuild';
 }
 
 
 /**
  * Simple Access Grants settings form.
  */
-function simple_access_grants_settings_page() {
+function simple_access_grants_settings_page()
+{
   backdrop_set_title(t('Simple Access Grants Settings'));
   $options = array(
     'rebuild' => t('<strong>Rebuild</strong>: Rebuild the Node Access permissions data table for the realm Simple Access Grant using the settings provided by this module.'),
@@ -307,7 +308,7 @@ function simple_access_grants_settings_page() {
   $form['simple_access_showgroups'] = array(
     '#type' => 'fieldset',
     '#title' => t('Rebuild permissions'),
-    '#description' => 'After adding or changing the access settings for a node type it is essential to rebuild the Node Access permissions data table for the realm Simple Access Grant',
+    '#description' => 'If ever the access settings for a node type are changed it is essential to rebuild the Node Access permissions data table for the realm Simple Access Grant',
   );
 
   // Add a submit button
@@ -323,7 +324,8 @@ function simple_access_grants_settings_page() {
 /**
  * Submit handler for module_settings_form().
  */
-function simple_access_grants_settings_page_submit($form, &$form_state) {
+function simple_access_grants_settings_page_submit($form, &$form_state)
+{
 
   $form['actions']['submit'] = NULL;
 
