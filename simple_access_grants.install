@@ -16,8 +16,7 @@ function simple_access_grants_enable()
   $rolenumbers = array();
   $rnum = 1;
   foreach ($currentroles as $role => $rname) {
-    $rname = strtolower($rname);
-    $rolenumbers[$rname] = $rnum;
+    $rolenumbers[$role] = $rnum;
     $rnum++;
   }
   config_set('simple_access_grants.settings', 'sag_roles', $rolenumbers);
