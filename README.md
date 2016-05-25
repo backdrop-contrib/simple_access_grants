@@ -32,7 +32,8 @@ Access Grants method and a single realm.
 
 ## Status
 
-This is an initial version of the module ready for testing.
+This is a working version of the module. Please report any issues
+you may find.
 
 
 ## Installation
