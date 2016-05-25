@@ -409,7 +409,6 @@ function simple_access_grants_form($node, $admin = FALSE)
   // for each role check whether both node and node_type settings apply
   // and if so, merge the settings
   foreach ($roles as $role) {
-    $role = strtolower($role);
     if (isset($node_grants[$role]) && isset($nodetype_grants[$role])) {
       $node_grants[$role] = simple_access_grants_merge($node_grants[$role], $nodetype_grants[$role]);
     }
@@ -444,10 +443,11 @@ function simple_access_grants_form($node, $admin = FALSE)
   );
 
   // create table of roles and grants (if permission is right or user is admin)
-  foreach ($roles as $role => $gid) {
+  foreach ($roles as $role => $rolename) {
     // given the role, we need the grant for this node from $node_grants
-    $node_grant = $node_grants[$role];
-    $form['simple_access_grants']['access'][$role] = simple_access_grants_form_row($role, $node_grant);
+    // check whether a grant exists
+    $node_grant = isset($node_grants[$role]) ? $node_grants[$role] : NULL;
+    $form['simple_access_grants']['access'][$role] = simple_access_grants_form_row($rolename, $node_grant);
   }
 
   return $form;
@@ -489,10 +489,10 @@ function simple_access_grants_node_type_form($nodetype)
   );
 
   // create table of roles and grants (if permission is right or user is admin)
-  foreach ($roles as $role => $gid) {
+  foreach ($roles as $role => $rolename) {
     // given the role, we need the grant for this node from $node_grants
     $node_grant = $nodetype_grants[$role];
-    $form['simple_access_grants']['access'][$role] = simple_access_grants_form_row($role, $node_grant);
+    $form['simple_access_grants']['access'][$role] = simple_access_grants_form_row($rolename, $node_grant);
   }
   return $form;
 }

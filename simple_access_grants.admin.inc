@@ -71,8 +71,8 @@ function simple_access_grants_add_profile_form($form, $form_state)
   // These should be null for this case of a new profile.
   $grants = array('view' => 0, 'update' => 0, 'delete' => 0);
   $roles = user_roles($members_only = TRUE);
-  foreach ($roles as $role => $roledata) {
-    $form['access'][$role] = simple_access_grants_form_row($role, $grants);
+  foreach ($roles as $role => $rolename) {
+    $form['access'][$role] = simple_access_grants_form_row($rolename, $grants);
   }
 
   $form['submit'] = array(
@@ -145,15 +145,14 @@ function simple_access_grants_edit_profile_form($form, $form_state, $profile)
   );
 
   // list all roles and provide select boxes to choose grants for role
-  foreach ($roles as $role) {
+  foreach ($roles as $role => $rolename) {
     // get current grant for this role to use as default value
-    $role = strtolower($role);
     if (isset($role_grants[$role])) {
       $grant = $role_grants[$role];
     } else {
       $grant = 0;
     }
-    $form['access'][$role] = simple_access_grants_form_row($role, $grant);
+    $form['access'][$role] = simple_access_grants_form_row($rolename, $grant);
   }
 
   $form['submit'] = array(
