@@ -7,8 +7,7 @@
 /**
  * Theme a list of simple access profiles.
  */
-function theme_simple_access_grants_profile_list($variables)
-{
+function theme_simple_access_grants_profile_list($variables) {
   $form =& $variables['form'];
   $rows = array();
   foreach (element_children($form['profiles']) as $id) {
@@ -23,7 +22,11 @@ function theme_simple_access_grants_profile_list($variables)
   }
   $output = backdrop_render_children($form);
   $header = array(t('Name'), t('Number'), t('Operations'));
-  $output .= theme('table', array('header' => $header, 'rows' => $rows, 'attributes' => array('id' => 'sa-profile')));
+  $output .= theme('table', array(
+    'header' => $header,
+    'rows' => $rows,
+    'attributes' => array('id' => 'sa-profile')
+  ));
   return $output;
 }
 
@@ -31,8 +34,7 @@ function theme_simple_access_grants_profile_list($variables)
 /**
  * Theme simple access form.
  */
-function theme_simple_access_grants_form($variables)
-{
+function theme_simple_access_grants_form($variables) {
   $form =& $variables['form'];
   $options = array();
   $output = '';

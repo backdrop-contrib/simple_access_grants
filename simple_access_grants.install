@@ -9,8 +9,7 @@
 /**
  * Implements hook_enable().
  */
-function simple_access_grants_enable()
-{
+function simple_access_grants_enable() {
   // number the current roles and store values in config
   $currentroles = user_roles($members_only = TRUE);
   $rolenumbers = array();
@@ -27,8 +26,7 @@ function simple_access_grants_enable()
 /**
  * Implements hook_disable().
  */
-function simple_access_grants_disable()
-{
+function simple_access_grants_disable() {
   backdrop_set_message(t('To fully disable simple_access_grants you also need to !rebuild_permissions.', array('!rebuild_permissions' => l(t('rebuild permissions'), 'admin/reports/status/rebuild'))));
 }
 

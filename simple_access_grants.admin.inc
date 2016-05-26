@@ -8,8 +8,7 @@
 /**
  * Access Profiles settings form.
  */
-function simple_access_grants_profile_list()
-{
+function simple_access_grants_profile_list() {
   $form = array();
   // get an array of current profile names
   $profiles = config_get('simple_access_grants.settings', 'sag_profiles');
@@ -48,8 +47,7 @@ function simple_access_grants_profile_list()
  * Simple Access Grants add profile form.
  * Used for 'add profile'
  */
-function simple_access_grants_add_profile_form($form, $form_state)
-{
+function simple_access_grants_add_profile_form($form, $form_state) {
   backdrop_set_title(t('Add a new profile'));
 
   $form['name'] = array(
@@ -86,8 +84,7 @@ function simple_access_grants_add_profile_form($form, $form_state)
 /**
  * Define add profile form submit callback.
  */
-function simple_access_grants_add_profile_form_submit($form, &$form_state)
-{
+function simple_access_grants_add_profile_form_submit($form, &$form_state) {
   $data = $form_state['values'];
   $profile = $data['name'];
   $grants = $data['access'];
@@ -118,8 +115,7 @@ function simple_access_grants_add_profile_form_submit($form, &$form_state)
  * Simple Access Grants edit profile form.
  * Used for editing a profile
  */
-function simple_access_grants_edit_profile_form($form, $form_state, $profile)
-{
+function simple_access_grants_edit_profile_form($form, $form_state, $profile) {
   // Get array of current roles excluding anonymous
   $roles = user_roles($members_only = TRUE);
   // Get array of current settings for this profile
@@ -149,7 +145,8 @@ function simple_access_grants_edit_profile_form($form, $form_state, $profile)
     // get current grant for this role to use as default value
     if (isset($role_grants[$role])) {
       $grant = $role_grants[$role];
-    } else {
+    }
+    else {
       $grant = 0;
     }
     $form['access'][$role] = simple_access_grants_form_row($rolename, $grant);
@@ -165,8 +162,7 @@ function simple_access_grants_edit_profile_form($form, $form_state, $profile)
 /**
  * Define edit profile form submit callback.
  */
-function simple_access_grants_edit_profile_form_submit($form, &$form_state)
-{
+function simple_access_grants_edit_profile_form_submit($form, &$form_state) {
   $data = $form_state['values'];
   $profile = $data['name'];
   $grants = $data['access'];
@@ -180,8 +176,7 @@ function simple_access_grants_edit_profile_form_submit($form, &$form_state)
 /**
  * Simple Access apply profile form.
  */
-function simple_access_grants_apply_profile_form()
-{
+function simple_access_grants_apply_profile_form() {
   // form to select a content type and select a profile to apply to all nodes of that type
   backdrop_set_title(t('Apply a profile to a content type'));
 
@@ -222,8 +217,7 @@ function simple_access_grants_apply_profile_form()
 /**
  * Apply profile form submit callback.
  */
-function simple_access_grants_apply_profile_form_submit($form, &$form_state)
-{
+function simple_access_grants_apply_profile_form_submit($form, &$form_state) {
   $selectednodetype = $form['nodetype']['#value'];
   $profilename = $form['profilename']['#value'];
   // now update config settings
@@ -244,8 +238,7 @@ function simple_access_grants_apply_profile_form_submit($form, &$form_state)
 /**
  * Confirm profile delete form.
  */
-function simple_access_grants_profile_delete_confirm($form, &$form_state, $profile)
-{
+function simple_access_grants_profile_delete_confirm($form, &$form_state, $profile) {
   $form['pid'] = array(
     '#type' => 'value',
     '#value' => $profile,
@@ -261,8 +254,7 @@ function simple_access_grants_profile_delete_confirm($form, &$form_state, $profi
 /**
  * Confirm delete submit callback.
  */
-function simple_access_grants_profile_delete_confirm_submit($form, &$form_state)
-{
+function simple_access_grants_profile_delete_confirm_submit($form, &$form_state) {
   $profile = $form_state['values']['pid'];
   // rebuild list of profiles excluding this one
   // get current config settings
@@ -296,8 +288,7 @@ function simple_access_grants_profile_delete_confirm_submit($form, &$form_state)
 /**
  * Simple Access Grants settings form.
  */
-function simple_access_grants_settings_page()
-{
+function simple_access_grants_settings_page() {
   backdrop_set_title(t('Simple Access Grants Settings'));
   $options = array(
     'rebuild' => t('<strong>Rebuild</strong>: Rebuild the Node Access permissions data table for the realm Simple Access Grant using the settings provided by this module.'),
@@ -323,8 +314,7 @@ function simple_access_grants_settings_page()
 /**
  * Submit handler for module_settings_form().
  */
-function simple_access_grants_settings_page_submit($form, &$form_state)
-{
+function simple_access_grants_settings_page_submit($form, &$form_state) {
 
   $form['actions']['submit'] = NULL;
 
