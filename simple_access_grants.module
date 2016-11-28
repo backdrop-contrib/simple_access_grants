@@ -627,3 +627,37 @@ function simple_access_grants_config_info() {
   return $prefixes;
 }
 
+/**
+ * Implements hook_user_role_insert().
+ */
+function simple_access_grants_user_role_insert($role) {
+  // check whether this is a new user role and if so
+  // assign a role id and add the role to config.
+  $role_name = $role->name;
+  // is there an existing role id?
+  $roles = config_get('simple_access_grants.settings', 'sag_roles');
+  if (!isset($roles[$role_name])) {
+    // it must be a new role so allocate an ID
+    $role_max = max($roles);
+    // add new role to $roles with new role id
+    $roles[$role_name] = $role_max + 1;
+    // update config
+    config_set('simple_access_grants.settings', 'sag_roles', $roles);
+  }
+}
+
+/**
+ * Implements hook_user_role_delete().
+ */
+function simple_access_grants_user_role_delete($role) {
+  // check that this role has an allocated id
+  // and, if so, delete it.
+  $role_name = $role->name;
+  // is there an existing role id?
+  $roles = config_get('simple_access_grants.settings', 'sag_roles');
+  if (isset($roles[$role_name])) {
+    unset($roles[$role_name]);
+    // update config
+    config_set('simple_access_grants.settings', 'sag_roles', $roles);
+  }
+}
