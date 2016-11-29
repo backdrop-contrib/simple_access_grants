@@ -291,7 +291,7 @@ function simple_access_grants_node_submit(&$form, &$form_state) {
   if (isset($form_state['values'])) {
     $op = isset($form_state['values']['op']) ? $form_state['values']['op'] : '';
     $nid = $form_state['values']['nid'];
-    if ($op == t('Save')) {
+    if (($nid > 1) && $op == t('Save')) {
       // save revised values in config sag_nodes
       // but check that some value is set
       $grants = $form_state['values']['access'];
