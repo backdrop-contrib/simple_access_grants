@@ -20,6 +20,16 @@ function simple_access_grants_enable() {
   }
   config_set('simple_access_grants.settings', 'sag_roles', $rolenumbers);
 
+  // identify the current node types and store names in config
+  // use backdrop function to get node type names
+  $nodetypelist = node_type_get_names();
+  $nodenames = array();
+  foreach ($nodetypelist as $node => $name) {
+    $nodenames[$node] = array();
+  }
+  config_set('simple_access_grants.settings', 'sag_nodetypes', $nodenames);
+
+
   backdrop_set_message(t('To fully activate simple_access_grants you also need to !rebuild_permissions.', array('!rebuild_permissions' => l(t('rebuild permissions'), 'admin/reports/status/rebuild'))));
 }
 

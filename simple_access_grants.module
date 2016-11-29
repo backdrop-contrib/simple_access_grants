@@ -253,14 +253,14 @@ function simple_access_grants_node_grants($account, $op) {
     // get this user's roles for the site
     $userroles = $account->roles;
     // get the role numbers registered for this module in config
-    $currentroles = config_get('simple_access_grants.settings', 'sag_roles');
+    $current_roles = config_get('simple_access_grants.settings', 'sag_roles');
 
     if (isset($userroles)) {
       // for each of this user's roles and each node type
       // find whether there is a grant for this value of $op
       foreach ($userroles as $role => $rname) {
         // get role number from config
-        $rnum = $currentroles[$rname];
+        $rnum = $current_roles[$rname];
         // add this role number to grants for this realm
         $grants['simple_access_grant'][] = $rnum;
       }
@@ -554,13 +554,15 @@ function simple_access_grants_profile_load($pname) {
 function simple_access_grants_audit() {
   // check individual node settings
   $nodes = config_get('simple_access_grants.settings', 'sag_nodes');
+  $current_roles = config_get('simple_access_grants.settings', 'sag_roles');
   foreach ($nodes as $node => $ndata) {
     // rebuild config data, omitting any null grants
+    // also omit user roles that no longer exist
     $nodegrants = array();
     $found = 0;
     if (isset($ndata)) {
       foreach ($ndata as $role => $grant) {
-        if (($grant['view'] == 1) || ($grant['update'] == 1) || ($grant['delete'] == 1)) {
+        if ((isset($current_roles[$role])) && (($grant['view'] == 1) || ($grant['update'] == 1) || ($grant['delete'] == 1))) {
           $nodegrants[$role] = $grant;
           $found = 1;
         }
@@ -573,7 +575,7 @@ function simple_access_grants_audit() {
 
   // check node type settings
   $nodetypes = config_get('simple_access_grants.settings', 'sag_nodetypes');
-  $currentroles = user_roles($members_only = TRUE);
+  $current_roles = user_roles($members_only = TRUE);
   if (isset($nodetypes)) {
     // check each node type for which there is config data
     foreach ($nodetypes as $nodetype => $ndata) {
@@ -587,7 +589,7 @@ function simple_access_grants_audit() {
           $nodegrants = array();
           $found = 0;
           foreach ($ndata as $role => $grant) {
-            if (isset($grant['view']) && isset($currentroles[$role])) {
+            if (isset($grant['view']) && isset($current_roles[$role])) {
               if (($grant['view'] == 1) || ($grant['update'] == 1) || ($grant['delete'] == 1)) {
                 $nodegrants[$role] = $grant;
                 $found = 1;
@@ -604,15 +606,30 @@ function simple_access_grants_audit() {
 
   // check role settings
   $roles = config_get('simple_access_grants.settings', 'sag_roles');
-  $currentroles = user_roles($members_only = TRUE);
-  $checkedroles = array();
+  $current_roles = user_roles($members_only = TRUE);
+  $checked_roles = array();
   if (isset($roles)) {
     foreach ($roles as $role => $rnum) {
-      if (isset($currentroles[$role])) {
-        $checkedroles[$role] = $rnum;
+      if (isset($current_roles[$role])) {
+        $checked_roles[$role] = $rnum;
       }
     }
-    config_set('simple_access_grants.settings', 'sag_roles', $checkedroles);
+    config_set('simple_access_grants.settings', 'sag_roles', $checked_roles);
+  }
+
+  // check profile settings
+  // remove any roles that no longer exist
+  $current_roles = config_get('simple_access_grants.settings', 'sag_roles');
+  $current_profiles = config_get('simple_access_grants.settings', 'sag_profiles');
+  foreach ($current_profiles as $profile => $roles) {
+    $this_profile = config_get('simple_access_grants.settings', "sag_profiles.$profile");
+    $new_roles = array();
+    foreach ($this_profile['roles'] as $role => $grants) {
+      if (isset($current_roles[$role])) {
+        $new_roles[$role] = $grants;
+      }
+    }
+    config_set('simple_access_grants.settings', "sag_profiles.$profile.roles", $new_roles);
   }
 }
 
@@ -660,4 +677,5 @@ function simple_access_grants_user_role_delete($role) {
     // update config
     config_set('simple_access_grants.settings', 'sag_roles', $roles);
   }
+  $tidyup = simple_access_grants_audit();
 }
