@@ -195,12 +195,11 @@ function simple_access_grants_node_access_records($node) {
       }
     }
   }
-
-  // create grant for each role using role number as gid
+  // build the grant locks for each role using role number as gid
   // get role numbers from config sag_roles
   $rolenumbers = config_get('simple_access_grants.settings', 'sag_roles');
   $grantlocks = array();
-  if (isset($grants)) {
+  if (isset($grants) && (count($grants) > 1)) {
     foreach ($grants as $role => $gdata) {
       if (isset($gdata['view'])) {
         $grantlocks[] = array(
@@ -556,11 +555,10 @@ function simple_access_grants_audit() {
   $nodes = config_get('simple_access_grants.settings', 'sag_nodes');
   $current_roles = config_get('simple_access_grants.settings', 'sag_roles');
   foreach ($nodes as $node => $ndata) {
-    // rebuild config data, omitting any null grants
-    // also omit user roles that no longer exist
+    // rebuild config data, omitting any nodes without grants
     $nodegrants = array();
     $found = 0;
-    if (isset($ndata)) {
+    if (isset($ndata) && (count($ndata) > 1)) {
       foreach ($ndata as $role => $grant) {
         if ((isset($current_roles[$role])) && (($grant['view'] == 1) || ($grant['update'] == 1) || ($grant['delete'] == 1))) {
           $nodegrants[$role] = $grant;
