@@ -1,4 +1,9 @@
-# Simple Access Grants
+# Simple Access Grants Mk2
+
+This Mark 2 version of this project is a further simplification
+and removes the facility to set access grants for single nodes.
+In practice it would seem adequate to allow access grants to be
+set for node/content types.
 
 The Simple Access Grants module provides an easy way to control
 access to nodes using the Node Access Grants method provided
@@ -8,14 +13,11 @@ This module implements a single realm within that method and enables
 User Grants to be specified for each user role in combination with
 each content type.
 
-User Grants may be applied individually to each node or to every
-node of that content type.
-
 User Grants can be edited, added or removed and then reapplied to
 all nodes.
 
 A User Grant Profile can be defined that combines multiple grants
-for application to a node or all nodes of that type.
+for application to all nodes of that type.
 
 
 ## Development
@@ -46,9 +48,8 @@ you may find.
 
 - No initial configuration is needed.
 
-- Each node and each content type has a new setting 'Access Settings' which,
-  if used, will restrict access to that content, either for an individual node
-  or for all nodes of that type.
+- Each content type has a new setting 'Access Settings' which,
+  if used, will restrict access to that content for all nodes of that type.
 
 - Additionally, at admin/config/content/simple_access_grants/profiles
   profiles can be added that enable grant settings for more than one role
