@@ -3,4 +3,3 @@ description = Provides simple access control for nodes.
 backdrop = 1.x
 type = module
 package = Access control
-configure = admin/config/content/simple_access_grants
