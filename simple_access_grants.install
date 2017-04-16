@@ -40,3 +40,15 @@ function simple_access_grants_disable() {
   backdrop_set_message(t('To fully disable simple_access_grants you also need to !rebuild_permissions.', array('!rebuild_permissions' => l(t('rebuild permissions'), 'admin/reports/status/rebuild'))));
 }
 
+/**
+ * Remove any config settings for individual nodes.
+ */
+function simple_access_grants_update_1001() {
+  $node_settings = config_get('simple_access_grants.settings', 'sag_nodes');
+  if (isset($node_settings)) {
+    $config = config('simple_access_grants.settings');
+    $config->clear('sag_nodes');
+    $config->clear('sag_profiles');
+    $config->save();
+  }
+}
