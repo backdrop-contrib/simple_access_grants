@@ -1,10 +1,6 @@
 {
   "_config_name": "simple_access_grants.settings",
-  "sag_nodes": {
-  },
   "sag_roles": {
-  },
-  "sag_profiles": {
   },
   "sag_nodetypes": {
   }
